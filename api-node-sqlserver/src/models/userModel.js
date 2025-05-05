@@ -1,5 +1,5 @@
 import { getConnection } from '../config/database.js';
-import sql from 'mssql'; // Asegúrate de importar 'sql' de 'mssql'
+import jwt from 'jsonwebtoken';
 
 export async function getAllUsers() {
   try {
@@ -78,6 +78,8 @@ export async function loginUser(email, password) {
 }
 
 
+
+
 export async function registrarCodigoQR(codigo) {
   try {
     const pool = await getConnection(); // Obtienes la conexión desde tu archivo de configuración
@@ -93,6 +95,3 @@ export async function registrarCodigoQR(codigo) {
     throw new Error('Error al insertar código QR: ' + err.message);
   }
 }
-
-
-

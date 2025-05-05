@@ -1,0 +1,8 @@
+USE PullmanFloridaApp;
+GO
+
+CREATE TABLE QRRegistros (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    CodigoQR NVARCHAR(255) NOT NULL,
+    FechaRegistro DATETIME DEFAULT GETDATE()
+);

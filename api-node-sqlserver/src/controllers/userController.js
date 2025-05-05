@@ -1,6 +1,56 @@
 // src/controllers/userController.js
 import { getAllUsers,  loginUser as loginUserModel, registrarCodigoQR } from '../models/UserModel.js';
+import jwt from 'jsonwebtoken';
 
+export const loginUserJWT = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email y password requeridos' });
+  }
+
+  try {
+    const user = await loginUserModel(email, password);
+
+    if (!user || user.error) {
+      switch (user?.error) {
+        case 'Usuario no encontrado':
+          return res.status(404).json({ message: 'El usuario no existe' });
+        case 'Contraseña incorrecta':
+          return res.status(401).json({ message: 'Contraseña incorrecta' });
+        case 'Usuario inactivo':
+          return res.status(403).json({ message: 'El usuario está inactivo' });
+        default:
+          return res.status(401).json({ message: 'Credenciales inválidas' });
+      }
+    }
+
+    // Generar JWT
+    const token = jwt.sign(
+      {
+        id: user.IdUsuario,
+        email: user.MailUsuario,
+        tipo: user.IdTipoUsuario
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || '1h'
+      }
+    );
+
+    return res.status(200).json({
+      message: 'Login exitoso con JWT',
+      token,
+      user,  // Puedes limitar los campos enviados si quieres
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Error del servidor',
+      error: error.message,
+    });
+  }
+};
 
 export const registrarCodigoQRController = async (req, res) => {
   const { codigo } = req.body;
