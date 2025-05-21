@@ -264,12 +264,11 @@ export async function getViajesPorConductorYFecha(idConductor, fecha) {
     throw new Error('Error al obtener los viajes: ' + error.message);
   }
 }
-export async function getViajesPorFiltros({ idConductor, fecha, hora, idDestino }) {
+export async function getViajesPorFiltros({ idConductor, fecha, hora, idDestino, estado }) {
   try {
     const pool = await getConnection();
     const request = pool.request();
 
-    // Construcción dinámica de filtros
     const whereClauses = [];
 
     if (idConductor) {
@@ -283,13 +282,18 @@ export async function getViajesPorFiltros({ idConductor, fecha, hora, idDestino 
     }
 
     if (hora) {
-      whereClauses.push('t1.hora = @hora');
+      whereClauses.push('t1.hora <= @hora'); // Mostrar viajes con hora menor o igual
       request.input('hora', hora);
     }
 
     if (idDestino) {
       whereClauses.push('t1.IdDestino = @idDestino');
       request.input('idDestino', idDestino);
+    }
+
+    if (estado !== undefined) {
+      whereClauses.push('t1.Estado = @estado');
+      request.input('estado', estado);
     }
 
     const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -301,13 +305,17 @@ export async function getViajesPorFiltros({ idConductor, fecha, hora, idDestino 
         t1.hora, 
         t1.fecha, 
         t2.NomDestino, 
+        t1.IdConductor,
+        CONCAT(t4.FirstName, ' ', t4.LastName) AS nombreConductor,
         CASE WHEN t1.ViajeActivo = 0 THEN 'En espera' ELSE 'Activo' END AS Iniciado,
         CASE WHEN t1.ViajeFinalizado = 1 THEN 'Finalizado' ELSE 'Activo' END AS Finalizado,
         t3.Ppu,
-        t3.Capacidad
+        t3.Capacidad,
+        CASE WHEN t1.Estado = 0 THEN 'Anulado' ELSE 'Vigente' END AS EstadoViaje
       FROM AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas t1 
       INNER JOIN AppPullmanFlorida.dbo.SGP_Mant_Destino t2 ON t2.IdDestino = t1.IdDestino 
       INNER JOIN AppPullmanFlorida.dbo.SGP_Mant_Bus t3 ON t3.IdBus = t1.IdBus
+      LEFT JOIN AppPullmanFlorida.dbo.UM_Users t4 ON t4.IdUser = t1.IdConductor
       ${whereSQL}
       ORDER BY t1.hora ASC
     `);
@@ -317,6 +325,9 @@ export async function getViajesPorFiltros({ idConductor, fecha, hora, idDestino 
     throw new Error('Error al obtener los viajes: ' + error.message);
   }
 }
+
+
+
 
 export async function getAsientosPorProgramacion(idProgramacion) {
   try {

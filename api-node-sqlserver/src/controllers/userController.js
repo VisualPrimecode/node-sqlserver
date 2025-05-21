@@ -153,10 +153,13 @@ export const obtenerViajesConFiltros = async (req, res) => {
   try {
     console.log("🚩 [DEBUG] Entrando a obtenerViajesConFiltros");
     console.log("🚩 [DEBUG] Parámetros recibidos:", req.query);
-    const { idConductor, fecha, hora, idDestino } = req.query;
 
-    // Validación para asegurarse de que al menos un filtro esté presente
-    if (!idConductor && !fecha && !hora && !idDestino) {
+    const { idConductor, fecha, hora, idDestino, estado } = req.query;
+
+    
+
+    // Validación: al menos un filtro debe estar presente
+    if (!idConductor && !fecha && !hora && !idDestino && estado === undefined) {
       return res.status(400).json({ message: 'Debe incluir al menos un parámetro de filtro.' });
     }
 
@@ -164,7 +167,8 @@ export const obtenerViajesConFiltros = async (req, res) => {
       idConductor: idConductor ? parseInt(idConductor) : undefined,
       fecha,
       hora,
-      idDestino: idDestino ? parseInt(idDestino) : undefined
+      idDestino: idDestino ? parseInt(idDestino) : undefined,
+      estado: estado !== undefined ? parseInt(estado) : undefined, // <-- estado puede ser 0 o 1
     };
 
     const viajes = await getViajesPorFiltros(filtros);
@@ -174,6 +178,7 @@ export const obtenerViajesConFiltros = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener viajes', error: error.message });
   }
 };
+
 
 
 function normalizarHora(hora) {
