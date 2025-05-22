@@ -10,7 +10,8 @@ import {
         getViajesPorFiltros,
         getConductoresActivos,
         getRutasPorConductor,
-        registrarDevolucion
+        registrarDevolucion,
+        obtenerCausasDevolucion
       } from '../models/userModel.js';
 import { getConnection } from '../config/database.js';
 import path from 'path';
@@ -18,53 +19,40 @@ import fs from 'fs';
 
 export async function registrarDevolucionHandler(req, res) {
   const {
-    idVenta, // ya no se usa directamente para buscar
-    numeroBoleto,
+    idVenta,
     fechaDevolucion,
     monto,
     fechaTransferencia,
+    numeroTransaccion,
     idUsuario,
     comentario,
-    idCausaDevolucion,
-
-    // Nuevos campos necesarios para encontrar la venta correcta
-    numeroAsiento,
-    fechaViaje,
-    idDestino,
-    horaSalida
+    idCausaDevolucion
   } = req.body;
 
-  // ✅ Validación básica de campos obligatorios
+  // Validación básica de campos obligatorios
   const camposFaltantes = [];
 
-if (!numeroBoleto) camposFaltantes.push('numeroBoleto');
-if (!fechaDevolucion) camposFaltantes.push('fechaDevolucion');
-if (!monto) camposFaltantes.push('monto');
-if (!idUsuario) camposFaltantes.push('idUsuario');
-if (!numeroAsiento) camposFaltantes.push('numeroAsiento');
-if (!fechaViaje) camposFaltantes.push('fechaViaje');
-if (!idDestino) camposFaltantes.push('idDestino');
-if (!horaSalida) camposFaltantes.push('horaSalida');
+  if (!idVenta) camposFaltantes.push('idVenta');
+  if (!fechaDevolucion) camposFaltantes.push('fechaDevolucion');
+  if (!monto) camposFaltantes.push('monto');
+  if (!idUsuario) camposFaltantes.push('idUsuario');
 
-if (camposFaltantes.length > 0) {
-  return res.status(400).json({
-    message: `Faltan los siguientes campos obligatorios: ${camposFaltantes.join(', ')}.`
-  });
-}
+  if (camposFaltantes.length > 0) {
+    return res.status(400).json({
+      message: `Faltan los siguientes campos obligatorios: ${camposFaltantes.join(', ')}.`
+    });
+  }
 
   try {
     await registrarDevolucion({
-      numeroBoleto,
+      idVenta,
       fechaDevolucion,
       monto,
       fechaTransferencia,
+      numeroTransaccion,
       idUsuario,
       comentario,
-      idCausaDevolucion,
-      numeroAsiento,
-      fechaViaje,
-      idDestino,
-      horaSalida
+      idCausaDevolucion
     });
 
     return res.status(201).json({ message: 'Devolución registrada correctamente.' });
@@ -72,19 +60,17 @@ if (camposFaltantes.length > 0) {
   } catch (error) {
     const msg = error.message || 'Error interno al registrar la devolución.';
 
-    // Errores conocidos del proceso de negocio
     if (
       msg.includes('no se encontró') ||
       msg.includes('ya está anulado')
     ) {
-      return res.status(409).json({ message: msg }); // Conflicto lógico
+      return res.status(409).json({ message: msg });
     }
 
     console.error('[ERROR] al registrar devolución:', msg);
     return res.status(500).json({ message: 'Error interno al registrar la devolución.' });
   }
 }
-
 
 
 
@@ -354,5 +340,22 @@ export const obtenerTiposGastosController = async (req, res) => {
   } catch (error) {
     console.error("🔥 [ERROR GENERAL]:", error.message);
     res.status(500).json({ message: 'Error al obtener tipos de gasto.' });
+  }
+};
+export const obtenerCausasDevolucionController = async (req, res) => {
+  try {
+    console.log("📥 [INICIO] Consulta de causas de devolución");
+
+    const causas = await obtenerCausasDevolucion();
+
+    console.log("✅ Causas de devolución obtenidas:", causas.length);
+    res.status(200).json({
+      message: 'Causas de devolución obtenidas correctamente.',
+      data: causas,
+    });
+
+  } catch (error) {
+    console.error("🔥 [ERROR GENERAL]:", error.message);
+    res.status(500).json({ message: 'Error al obtener causas de devolución.' });
   }
 };

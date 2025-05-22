@@ -5,51 +5,30 @@ import sql from 'mssql';
 
 export async function registrarDevolucion(devolucion) {
   const {
-    numeroBoleto,
+    idVenta,
     fechaDevolucion,
     monto,
     fechaTransferencia = null,
-    numeroTransaccion = null, // aún no se espera desde cliente
+    numeroTransaccion = null,
     idUsuario,
     comentario = null,
-    idCausaDevolucion = null,
-
-    // Nuevos campos para identificar el boleto correctamente
-    numeroAsiento,
-    fechaViaje,
-    idDestino,
-    horaSalida
+    idCausaDevolucion = null
   } = devolucion;
 
   try {
     const pool = await getConnection();
 
-    // Buscar el IdVenta considerando múltiples condiciones
-    console.log('Buscando IdVenta con los siguientes datos:');
-    console.log('Número de Boleto:', numeroBoleto);
-    console.log('Número de Asiento:', numeroAsiento);
-    console.log('Fecha de Viaje:', fechaViaje);
-    console.log('ID Destino:', idDestino);
-    console.log('Hora de Salida:', horaSalida);
-    
+    // Verificar si el IdVenta existe y si el registro no está anulado
     const ventaResult = await pool.request()
-      .input('NumBoleto', sql.NVarChar, numeroBoleto)
-      .input('numeroAsiento', sql.NVarChar, numeroAsiento)
-      .input('FechaViaje', sql.Date, fechaViaje)
-      .input('IdDestino', sql.Int, idDestino)
-      .input('HoraSalida', sql.NVarChar, horaSalida)
+      .input('IdVenta', sql.Int, idVenta)
       .query(`
-        SELECT IdVenta, Anulado
+        SELECT Anulado
         FROM AppPullmanFlorida.dbo.SGP_Vnt_Venta
-        WHERE NumBoleto = @NumBoleto
-          AND Asiento = @numeroAsiento
-          AND FechaViaje = @FechaViaje
-          AND IdDestino = @IdDestino
-          AND HoraSalida = @HoraSalida
+        WHERE IdVenta = @IdVenta
       `);
 
     if (ventaResult.recordset.length === 0) {
-      throw new Error('No se encontró ningún boleto que coincida con los datos proporcionados.');
+      throw new Error('No se encontró ningún registro de venta con el IdVenta proporcionado.');
     }
 
     const venta = ventaResult.recordset[0];
@@ -58,21 +37,11 @@ export async function registrarDevolucion(devolucion) {
       throw new Error('El boleto ya está anulado en SGP_Vnt_Venta.');
     }
 
-    const idVenta = venta.IdVenta;
-
     console.log(`(Simulación) Se habría anulado el boleto con IdVenta: ${idVenta}`);
 
-    // await pool.request()
-    //   .input('IdVenta', sql.Int, idVenta)
-    //   .query(`
-    //     UPDATE AppPullmanFlorida.dbo.SGP_Vnt_Venta
-    //     SET Anulado = 1
-    //     WHERE IdVenta = @IdVenta
-    //   `);
-
-    // Insertar registro en TB_Devoluciones
+    // Insertar en TB_Devoluciones (idVenta se usará como "NumeroBoleto")
     await pool.request()
-      .input('NumeroBoleto', sql.NVarChar, numeroBoleto)
+      .input('NumeroBoleto', sql.NVarChar, idVenta.toString()) // 👈 Se guarda como string
       .input('FechaDevolucion', sql.Date, fechaDevolucion)
       .input('Monto', sql.Decimal(10, 2), monto)
       .input('FechaTransferencia', sql.Date, fechaTransferencia)
@@ -92,6 +61,8 @@ export async function registrarDevolucion(devolucion) {
     throw new Error('Error al registrar la devolución: ' + err.message);
   }
 }
+
+
 
 
 
@@ -387,6 +358,22 @@ export async function obtenerTiposGastos() {
   } catch (err) {
     console.error('🔥 [ERROR] Error al obtener tipos de gastos:', err.message);
     throw new Error('Error al obtener tipos de gastos: ' + err.message);
+  }
+}
+export async function obtenerCausasDevolucion() {
+  try {
+    const pool = await getConnection();
+    const result = await pool.request().query(`
+      SELECT IdCausa, Descripcion 
+      FROM PullmanFloridaApp.dbo.TB_CausasDevolucion 
+      WHERE Activo = 1
+      ORDER BY IdCausa ASC;
+    `);
+
+    return result.recordset;
+  } catch (err) {
+    console.error('❌ Error al obtener causas de devolución:', err.message);
+    throw new Error('Error al obtener causas de devolución: ' + err.message);
   }
 }
 

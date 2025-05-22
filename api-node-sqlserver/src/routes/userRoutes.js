@@ -9,7 +9,8 @@ import {
         obtenerViajesConFiltros,
         obtenerConductoresActivos,
         getRutasPorConductorHandler,
-        registrarDevolucionHandler
+        registrarDevolucionHandler,
+        obtenerCausasDevolucionController
  } from '../controllers/userController.js';
 import { verificarToken } from '../middleware/authMiddleware.js'; // <-- Importa middleware
 import {loginUserJWT, refreshTokenController} from '../controllers/authController.js';
@@ -29,6 +30,8 @@ router.get('/rutasConductores', getRutasPorConductorHandler);
 router.post('/gastos', registrarGastoController);
 router.post('/registroDevolucion', registrarDevolucionHandler);
 router.get('/tipos-gasto', obtenerTiposGastosController);
+router.get('/causasDevolucion', obtenerCausasDevolucionController);
+
 
 
 
