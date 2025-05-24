@@ -142,6 +142,7 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
   console.log('➡️ Registrando código QR con ID Venta:', idVenta, 'y ID Usuario:', idUsuario);
 
   try {
+    // Verifica si ya existe el registro de boleto (duplicado)
     const checkResult = await pool.request()
       .input('IDVENTA', idVenta)
       .query(`
@@ -149,26 +150,38 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
         FROM PullmanFloridaApp.dbo.Vnt_RegistroBoletos
         WHERE IdVenta = @IDVENTA
       `);
-      const ventaValidaResult = await pool.request()
-      .input('IDVENTA', idVenta)
-      .query(`
-        SELECT COUNT(*) AS count
-        FROM AppPullmanFlorida.dbo.SGP_Vnt_Venta
-        WHERE IdVenta = @IDVENTA AND Anulado = 0
-      `);
-    if (ventaValidaResult.recordset[0].count === 0) {
-  const mensaje = 'ID de venta no válido o está anulado en SGP_Vnt_Venta';
-  console.warn('⚠️', mensaje);
-  await registrarError(pool, idVenta, idUsuario, mensaje);
-  return false;
-}
+
     if (checkResult.recordset[0].count > 0) {
       const mensaje = 'ID de venta duplicado: ya existe en Vnt_RegistroBoletos';
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
-      return false;
+      return { success: false, message: mensaje };
     }
 
+    // Valida si la venta existe y si está anulada
+    const ventaResult = await pool.request()
+      .input('IDVENTA', idVenta)
+      .query(`
+        SELECT Anulado
+        FROM AppPullmanFlorida.dbo.SGP_Vnt_Venta
+        WHERE IdVenta = @IDVENTA
+      `);
+
+    if (ventaResult.recordset.length === 0) {
+      const mensaje = 'ID de venta no encontrado en SGP_Vnt_Venta';
+      console.warn('⚠️', mensaje);
+      await registrarError(pool, idVenta, idUsuario, mensaje);
+      return { success: false, message: mensaje };
+    }
+
+    if (ventaResult.recordset[0].Anulado === 1) {
+      const mensaje = 'La venta está anulada en SGP_Vnt_Venta';
+      console.warn('⚠️', mensaje);
+      await registrarError(pool, idVenta, idUsuario, mensaje);
+      return { success: false, message: mensaje };
+    }
+
+    // Inserta el registro válido
     await pool.request()
       .input('IDVENTA', idVenta)
       .input('IDUSUARIO', idUsuario)
@@ -177,14 +190,16 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
         VALUES (@IDVENTA, @IDUSUARIO, GETDATE())
       `);
 
-    return true;
+    return { success: true };
 
   } catch (err) {
-    console.error('❌ Error al insertar en Vnt_RegistroBoletos:', err.message);
+    const mensaje = 'Error al insertar en Vnt_RegistroBoletos: ' + err.message;
+    console.error('❌', mensaje);
     await registrarError(pool, idVenta, idUsuario, err.message);
-    throw new Error('Error al insertar en Vnt_RegistroBoletos: ' + err.message);
+    throw new Error(mensaje);
   }
 }
+
 
 // Función auxiliar para registrar en Vnt_RegistroFallido
 export async function registrarError(pool, idVenta, idUsuario, tipoError) {
