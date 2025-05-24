@@ -138,8 +138,8 @@ export async function loginUser(email, password) {
   }
 }
 
-export async function registrarCodigoQR(pool, idVenta, idUsuario) {
-  console.log('➡️ Registrando código QR con ID Venta:', idVenta, 'y ID Usuario:', idUsuario);
+export async function registrarCodigoQR(pool, idVenta, idUsuario, numAsiento) {
+  console.log('➡️ Registrando código QR con ID Venta:', idVenta, 'ID Usuario:', idUsuario, 'y Asiento:', numAsiento);
 
   try {
     // Verificar si ya está registrado
@@ -158,11 +158,11 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
       throw new Error(mensaje);
     }
 
-    // Verificar existencia y anulación
+    // Verificar existencia, anulación y número de asiento
     const ventaResult = await pool.request()
       .input('IDVENTA', idVenta)
       .query(`
-        SELECT Anulado
+        SELECT Anulado, Asiento
         FROM AppPullmanFlorida.dbo.SGP_Vnt_Venta
         WHERE IdVenta = @IDVENTA
       `);
@@ -174,10 +174,17 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
       throw new Error(mensaje);
     }
 
-    const anulado = ventaResult.recordset[0].Anulado;
+    const { Anulado: anulado, Asiento: asientoRegistrado } = ventaResult.recordset[0];
 
     if (anulado) {
       const mensaje = 'La venta está anulada en SGP_Vnt_Venta';
+      console.warn('⚠️', mensaje);
+      await registrarError(pool, idVenta, idUsuario, mensaje);
+      throw new Error(mensaje);
+    }
+
+    if (String(asientoRegistrado) !== String(numAsiento)) {
+      const mensaje = `Asiento inválido: se esperaba '${asientoRegistrado}' pero se recibió '${numAsiento}'`;
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
       throw new Error(mensaje);
@@ -202,6 +209,7 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
     throw err;
   }
 }
+
 
 
 // Función auxiliar para registrar en Vnt_RegistroFallido

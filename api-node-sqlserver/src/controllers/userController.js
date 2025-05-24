@@ -227,7 +227,7 @@ export const registrarCodigoQRController = async (req, res) => {
 
     console.log('✅ Código QR válido y coincide con los parámetros');
 
-    await registrarCodigoQR(pool, qrIdVenta, idUsuario);
+    await registrarCodigoQR(pool, qrIdVenta, idUsuario, qrAsiento);
 
     return res.status(200).json({
       message: 'Código QR recibido y validado correctamente',
