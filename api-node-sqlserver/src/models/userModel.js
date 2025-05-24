@@ -155,7 +155,7 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
       const mensaje = 'ID de venta duplicado: ya existe en Vnt_RegistroBoletos';
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
-      return { success: false, detalle: mensaje };
+      throw new Error(mensaje);
     }
 
     // Verificar existencia y anulación
@@ -171,7 +171,7 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
       const mensaje = 'ID de venta no existe en SGP_Vnt_Venta';
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
-      return { success: false, detalle: mensaje };
+      throw new Error(mensaje);
     }
 
     const anulado = ventaResult.recordset[0].Anulado;
@@ -180,7 +180,7 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
       const mensaje = 'La venta está anulada en SGP_Vnt_Venta';
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
-      return { success: false, detalle: mensaje };
+      throw new Error(mensaje);
     }
 
     // Insertar el registro válido
@@ -192,12 +192,14 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario) {
         VALUES (@IDVENTA, @IDUSUARIO, GETDATE())
       `);
 
-    return { success: true };
+    return true;
 
   } catch (err) {
-    console.error('❌ Error al insertar en Vnt_RegistroBoletos:', err.message);
-    await registrarError(pool, idVenta, idUsuario, err.message);
-    throw new Error('Error al insertar en Vnt_RegistroBoletos: ' + err.message);
+    console.error('❌ Error en registrarCodigoQR:', err.message);
+    if (!err._handled) {
+      await registrarError(pool, idVenta, idUsuario, err.message);
+    }
+    throw err;
   }
 }
 

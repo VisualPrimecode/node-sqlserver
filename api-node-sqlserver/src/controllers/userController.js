@@ -175,7 +175,7 @@ function normalizarHora(hora) {
 }
 
 
-export const registrarCodigoQRController = async (req, res) => { 
+export const registrarCodigoQRController = async (req, res) => {
   const { codigo, tripId, tripDate, tripTime, idUsuario } = req.body;
   const pool = await getConnection();
 
@@ -197,8 +197,6 @@ export const registrarCodigoQRController = async (req, res) => {
     }
 
     const [qrTripId, qrIdVenta, qrFecha, qrHora, qrAsiento] = partes;
-
-    // Validación específica por campo
     const errores = [];
 
     if (qrTripId !== String(tripId)) {
@@ -229,23 +227,23 @@ export const registrarCodigoQRController = async (req, res) => {
 
     console.log('✅ Código QR válido y coincide con los parámetros');
 
-    const exito = await registrarCodigoQR(pool, qrIdVenta, idUsuario);
+    await registrarCodigoQR(pool, qrIdVenta, idUsuario);
 
-    if (exito) {
-      return res.status(200).json({
-        message: 'Código QR recibido y validado correctamente',
-        asiento: qrAsiento
-      });
-    } else {
-      const mensaje = 'No se pudo registrar el código QR (venta inválida o duplicada)';
-      return res.status(500).json({ message: mensaje });
-    }
+    return res.status(200).json({
+      message: 'Código QR recibido y validado correctamente',
+      asiento: qrAsiento
+    });
 
   } catch (error) {
-    const mensaje = 'Excepción: ' + error.message;
+    const mensaje = error.message;
+    const esErrorDatos = mensaje.includes('no existe') || mensaje.includes('anulada') || mensaje.includes('duplicado');
+
+    const status = esErrorDatos ? 400 : 500;
+
     console.error('🔥 Excepción al registrar código QR:', mensaje);
     await registrarFallo(pool, 0, idUsuario, mensaje);
-    return res.status(500).json({ message: 'Error al procesar código QR', error: error.message });
+
+    return res.status(status).json({ message: mensaje });
   }
 };
 
