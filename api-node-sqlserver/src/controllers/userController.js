@@ -234,17 +234,21 @@ export const registrarCodigoQRController = async (req, res) => {
       asiento: qrAsiento
     });
 
-  } catch (error) {
-    const mensaje = error.message;
-    const esErrorDatos = mensaje.includes('no existe') || mensaje.includes('anulada') || mensaje.includes('duplicado');
+  }  catch (error) {
+  const mensaje = error.message;
+  const esErrorDatos = mensaje.includes('no existe') || mensaje.includes('anulada') || mensaje.includes('duplicado');
 
-    const status = esErrorDatos ? 400 : 500;
+  const status = esErrorDatos ? 400 : 500;
 
-    console.error('🔥 Excepción al registrar código QR:', mensaje);
-    await registrarFallo(pool, 0, idUsuario, mensaje);
+  console.error('🔥 Excepción al registrar código QR:', mensaje);
+  await registrarFallo(pool, 0, idUsuario, mensaje);
 
-    return res.status(status).json({ message: mensaje });
-  }
+  return res.status(status).json({
+    message: 'Error en el registro del código QR',
+    detalles: [mensaje]
+  });
+}
+
 };
 
 
