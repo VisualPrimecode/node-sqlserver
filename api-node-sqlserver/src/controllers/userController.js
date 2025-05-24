@@ -11,7 +11,9 @@ import {
         getConductoresActivos,
         getRutasPorConductor,
         registrarDevolucion,
-        obtenerCausasDevolucion
+        obtenerCausasDevolucion,
+        anularViajeSimulado,
+        asignarViajeAConductor
       } from '../models/userModel.js';
 import { getConnection } from '../config/database.js';
 import path from 'path';
@@ -173,14 +175,14 @@ function normalizarHora(hora) {
 }
 
 
-export const registrarCodigoQRController = async (req, res) => {
+export const registrarCodigoQRController = async (req, res) => { 
   const { codigo, tripId, tripDate, tripTime, idUsuario } = req.body;
 
-  const pool = await getConnection(); // ✅ conexión única
+  const pool = await getConnection();
 
   if (!codigo) {
     const mensaje = 'Código QR requerido';
-    await registrarFallo(pool, 'SIN_ID', idUsuario, mensaje);
+    await registrarFallo(pool, 0, idUsuario, mensaje); // 0 en vez de 'SIN_ID'
     return res.status(400).json({ message: mensaje });
   }
 
@@ -191,7 +193,8 @@ export const registrarCodigoQRController = async (req, res) => {
 
     if (partes.length < 5) {
       const mensaje = 'Formato de código QR inválido';
-      await registrarFallo(pool, 'SIN_ID', idUsuario, mensaje);
+      await registrarFallo(pool, 0, idUsuario, mensaje);
+      console.log('❌ numero de arugmentos:', partes.length);
       return res.status(400).json({ message: mensaje, recibido: partes });
     }
 
@@ -208,7 +211,6 @@ export const registrarCodigoQRController = async (req, res) => {
     if (!esValido) {
       const mensaje = 'Datos del código QR no coinciden con los esperados';
       await registrarFallo(pool, qrIdVenta, idUsuario, mensaje);
-
       return res.status(400).json({
         message: mensaje,
         esperado: { tripId, tripDate, tripTime: horaNormalizadaBody },
@@ -226,15 +228,18 @@ export const registrarCodigoQRController = async (req, res) => {
         asiento: qrAsiento
       });
     } else {
+      const mensaje = 'No se pudo registrar el código QR (venta inválida o duplicada)';
       return res.status(500).json({ message: mensaje });
     }
 
   } catch (error) {
-    console.error('🔥 Excepción al registrar código QR:', error.message);
-    await registrarFallo(pool, 'SIN_ID', idUsuario, 'Excepción: ' + error.message);
+    const mensaje = 'Excepción: ' + error.message;
+    console.error('🔥 Excepción al registrar código QR:', mensaje);
+    await registrarFallo(pool, 0, idUsuario, mensaje);
     return res.status(500).json({ message: 'Error al procesar código QR', error: error.message });
-  }
+  }  
 };
+
 
 
 async function registrarFallo(pool, idVenta, idUsuario, mensaje) {
@@ -359,3 +364,65 @@ export const obtenerCausasDevolucionController = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener causas de devolución.' });
   }
 };
+export async function anularViajeHandler(req, res) {
+  const { idProgramacion } = req.body;
+
+  if (!idProgramacion) {
+    return res.status(400).json({
+      message: 'El campo idProgramacion es obligatorio.'
+    });
+  }
+
+  try {
+    const resultado = await anularViajeSimulado(idProgramacion);
+
+    return res.status(200).json({
+      message: resultado.message
+    });
+
+  } catch (error) {
+    const msg = error.message || 'Error interno al anular el viaje.';
+
+    if (
+      msg.includes('no se encontró') ||
+      msg.includes('ya está anulado')
+    ) {
+      return res.status(409).json({ message: msg });
+    }
+
+    console.error('[ERROR] al anular viaje:', msg);
+    return res.status(500).json({ message: 'Error interno al anular el viaje.' });
+  }
+  
+}
+export async function asignarViajeAConductorHandler(req, res) {
+  const { idProgramacion, idConductor } = req.body;
+
+  const camposFaltantes = [];
+  if (!idProgramacion) camposFaltantes.push('idProgramacion');
+  if (!idConductor) camposFaltantes.push('idConductor');
+
+  if (camposFaltantes.length > 0) {
+    return res.status(400).json({
+      message: `Faltan los siguientes campos obligatorios: ${camposFaltantes.join(', ')}.`
+    });
+  }
+
+  try {
+    const resultado = await asignarViajeAConductor({ idProgramacion, idConductor });
+
+    return res.status(200).json({
+      message: resultado.message,
+      idsVenta: resultado.idsVenta || [], // ahora sí se retorna al front
+    });
+  } catch (error) {
+    const msg = error.message || 'Error interno al asignar el viaje.';
+
+    if (msg.includes('No se encontró el viaje')) {
+      return res.status(404).json({ message: msg });
+    }
+
+    console.error('[ERROR] al asignar viaje:', msg);
+    return res.status(500).json({ message: 'Error interno al asignar el viaje.' });
+  }
+}

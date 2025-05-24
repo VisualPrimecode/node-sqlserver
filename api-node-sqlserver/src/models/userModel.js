@@ -62,11 +62,6 @@ export async function registrarDevolucion(devolucion) {
   }
 }
 
-
-
-
-
-
 export async function getAllUsers() {
   try {
     const pool = await getConnection();
@@ -143,9 +138,6 @@ export async function loginUser(email, password) {
   }
 }
 
-
-
-
 export async function registrarCodigoQR(pool, idVenta, idUsuario) {
   console.log('➡️ Registrando código QR con ID Venta:', idVenta, 'y ID Usuario:', idUsuario);
 
@@ -205,10 +197,6 @@ export async function registrarError(pool, idVenta, idUsuario, tipoError) {
       VALUES (@IDVENTA, @IDUSUARIO, GETDATE(), @tipoerror)
     `);
 }
-
-
-
-
 
 export async function getViajesPorConductorYFecha(idConductor, fecha) {
   try {
@@ -297,9 +285,6 @@ export async function getViajesPorFiltros({ idConductor, fecha, hora, idDestino,
   }
 }
 
-
-
-
 export async function getAsientosPorProgramacion(idProgramacion) {
   try {
     const pool = await getConnection();
@@ -324,6 +309,7 @@ export async function getAsientosPorProgramacion(idProgramacion) {
   }
 
 }
+
 export async function registrarGasto(idProgramacion, idTipoGasto, monto, comprobanteRuta) {
   try {
     const pool = await getConnection();
@@ -347,6 +333,7 @@ export async function registrarGasto(idProgramacion, idTipoGasto, monto, comprob
     throw new Error('Error al registrar gasto: ' + err.message);
   }
 }
+
 export async function obtenerTiposGastos() {
   try {
     const pool = await getConnection();
@@ -360,6 +347,7 @@ export async function obtenerTiposGastos() {
     throw new Error('Error al obtener tipos de gastos: ' + err.message);
   }
 }
+
 export async function obtenerCausasDevolucion() {
   try {
     const pool = await getConnection();
@@ -394,6 +382,7 @@ export async function getConductoresActivos() {
     throw new Error('Error al obtener los conductores: ' + error.message);
   }
 }
+
 export async function getRutasPorConductor(idConductor) {
   try {
     const pool = await getConnection();
@@ -415,3 +404,107 @@ export async function getRutasPorConductor(idConductor) {
   }
 }
 
+export async function anularViajeSimulado(idProgramacion) {
+  try {
+    const pool = await getConnection();
+
+    // Verificar si el viaje existe y obtener su estado
+    const result = await pool.request()
+      .input('idProgramacion', sql.Int, idProgramacion)
+      .query(`
+        SELECT estado, ViajeActivo, ViajeFinalizado
+        FROM AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas
+        WHERE idProgramacion = @idProgramacion
+      `);
+
+    if (result.recordset.length === 0) {
+      throw new Error(`No se encontró ningún viaje con idProgramacion = ${idProgramacion}.`);
+    }
+
+    const viaje = result.recordset[0];
+
+    if (viaje.estado === 'Anulado' || viaje.ViajeActivo === 0) {
+      throw new Error('El viaje ya está anulado o inactivo.');
+    }
+
+    // Simulación de anulación (aquí iría la actualización real)
+    console.log(`(Simulación) Se habría anulado el viaje con idProgramacion: ${idProgramacion}`);
+
+    /*
+    // Código real comentado para futura implementación:
+    await pool.request()
+      .input('idProgramacion', sql.Int, idProgramacion)
+      .query(`
+        UPDATE AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas
+        SET estado = 'Anulado', ViajeActivo = 0, ViajeFinalizado = 1
+        WHERE idProgramacion = @idProgramacion
+      `);
+    */
+
+    return { success: true, message: `Simulación: viaje con idProgramacion ${idProgramacion} anulado.` };
+
+  } catch (error) {
+    throw new Error('Error al simular la anulación del viaje: ' + error.message);
+  }
+}
+
+export async function asignarViajeAConductor({ idProgramacion, idConductor }) {
+  try {
+    const pool = await getConnection();
+
+    // Verificar si el viaje existe
+    const viajeResult = await pool.request()
+      .input('idProgramacion', sql.Int, idProgramacion)
+      .query(`
+        SELECT IdConductor, ViajeActivo, estado
+        FROM AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas
+        WHERE idProgramacion = @idProgramacion
+      `);
+
+    if (viajeResult.recordset.length === 0) {
+      throw new Error('No se encontró el viaje con el idProgramacion proporcionado.');
+    }
+
+    const viaje = viajeResult.recordset[0];
+
+    console.log(`(Simulación) Se habría asignado el viaje ${idProgramacion} al conductor ${idConductor}`);
+
+    // Obtener los IdVenta asociados al viaje
+    const ventasResult = await pool.request()
+      .input('idProgramacion', sql.Int, idProgramacion)
+      .query(`
+        SELECT v.IdVenta
+        FROM AppPullmanFlorida.dbo.SGP_Vnt_Venta v
+        INNER JOIN AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas p
+          ON v.FechaViaje = p.fecha AND v.HoraSalida = p.hora AND v.IdDestino = p.IdDestino
+        WHERE p.idProgramacion = @idProgramacion
+      `);
+
+    const idsVenta = ventasResult.recordset.map(row => row.IdVenta);
+    console.log(`(Simulación) Se habrían actualizado los siguientes IdVenta con IdUsuario del conductor ${idConductor}:`, idsVenta);
+
+    // Simulación: aquí se comentaría el update real
+    /*
+    for (const idVenta of idsVenta) {
+      await pool.request()
+        .input('idVenta', sql.Int, idVenta)
+        .input('idConductor', sql.Int, idConductor)
+        .query(`
+          UPDATE AppPullmanFlorida.dbo.SGP_Vnt_Venta
+          SET IdUsuario = @idConductor
+          WHERE IdVenta = @idVenta
+        `);
+    }
+    */
+
+    return {
+  success: true,
+  message: `Se habría asignado el viaje ${idProgramacion} al conductor ${idConductor}`,
+  idsVenta: idsVenta,
+};
+  } catch (error) {
+    throw new Error('Error al asignar el viaje: ' + error.message);
+  }
+
+
+}
