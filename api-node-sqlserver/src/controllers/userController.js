@@ -177,12 +177,11 @@ function normalizarHora(hora) {
 
 export const registrarCodigoQRController = async (req, res) => { 
   const { codigo, tripId, tripDate, tripTime, idUsuario } = req.body;
-
   const pool = await getConnection();
 
   if (!codigo) {
     const mensaje = 'Código QR requerido';
-    await registrarFallo(pool, 0, idUsuario, mensaje); // 0 en vez de 'SIN_ID'
+    await registrarFallo(pool, 0, idUsuario, mensaje);
     return res.status(400).json({ message: mensaje });
   }
 
@@ -191,30 +190,40 @@ export const registrarCodigoQRController = async (req, res) => {
   try {
     const partes = codigo.split(',');
 
-    if (partes.length < 5) {
-      const mensaje = 'Formato de código QR inválido';
+    if (partes.length !== 5) {
+      const mensaje = `Formato incorrecto: se esperaban 5 valores (tripId,idVenta,fecha,hora,asiento) pero se recibieron ${partes.length}`;
       await registrarFallo(pool, 0, idUsuario, mensaje);
-      console.log('❌ numero de arugmentos:', partes.length);
       return res.status(400).json({ message: mensaje, recibido: partes });
     }
 
     const [qrTripId, qrIdVenta, qrFecha, qrHora, qrAsiento] = partes;
 
-    const horaNormalizadaQR = normalizarHora(qrHora);
-    const horaNormalizadaBody = normalizarHora(tripTime);
+    // Validación específica por campo
+    const errores = [];
 
-    const esValido =
-      qrTripId === String(tripId) &&
-      qrFecha === tripDate &&
-      horaNormalizadaQR === horaNormalizadaBody;
+    if (qrTripId !== String(tripId)) {
+      errores.push(`tripId inválido: se esperaba '${tripId}' pero se recibió '${qrTripId}'`);
+    }
 
-    if (!esValido) {
+    if (qrFecha !== tripDate) {
+      errores.push(`fecha inválida: se esperaba '${tripDate}' pero se recibió '${qrFecha}'`);
+    }
+
+    const horaQR = normalizarHora(qrHora);
+    const horaEsperada = normalizarHora(tripTime);
+
+    if (horaQR !== horaEsperada) {
+      errores.push(`hora inválida: se esperaba '${horaEsperada}' pero se recibió '${horaQR}'`);
+    }
+
+    if (errores.length > 0) {
       const mensaje = 'Datos del código QR no coinciden con los esperados';
-      await registrarFallo(pool, qrIdVenta, idUsuario, mensaje);
+      const detalle = errores.join('; ');
+      await registrarFallo(pool, qrIdVenta, idUsuario, `${mensaje}: ${detalle}`);
       return res.status(400).json({
         message: mensaje,
-        esperado: { tripId, tripDate, tripTime: horaNormalizadaBody },
-        recibido: { tripId: qrTripId, tripDate: qrFecha, tripTime: horaNormalizadaQR }
+        detalles: errores,
+        recibido: { tripId: qrTripId, tripDate: qrFecha, tripTime: horaQR }
       });
     }
 
@@ -237,7 +246,7 @@ export const registrarCodigoQRController = async (req, res) => {
     console.error('🔥 Excepción al registrar código QR:', mensaje);
     await registrarFallo(pool, 0, idUsuario, mensaje);
     return res.status(500).json({ message: 'Error al procesar código QR', error: error.message });
-  }  
+  }
 };
 
 
