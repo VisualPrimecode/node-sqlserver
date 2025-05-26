@@ -534,3 +534,43 @@ export async function asignarViajeAConductor({ idProgramacion, idConductor }) {
 
 
 }
+// models/viajesModel.js
+export async function getResumenMensualPorConductor(idConductor, fechaInicio, fechaFin) {
+  try {
+    const pool = await getConnection();
+    const result = await pool.request().query(`
+      SELECT 
+        t1.fecha, 
+        t1.hora, 
+        t2.NomDestino, 
+        (
+          SELECT COUNT(t3.IdRegistro)
+          FROM PullmanFloridaApp.dbo.Vnt_RegistroBoletos t3
+          INNER JOIN AppPullmanFlorida.dbo.SGP_Vnt_Venta t4 ON t4.IdVenta = t3.IdVenta
+          WHERE 
+            t4.IdDestino = t1.IdDestino AND 
+            t4.FechaViaje = t1.fecha AND 
+            t4.HoraSalida = t1.hora
+        ) AS PasajerosTransportados,
+        (
+          SELECT SUM(t4.Monto)
+          FROM PullmanFloridaApp.dbo.Vnt_RegistroBoletos t3
+          INNER JOIN AppPullmanFlorida.dbo.SGP_Vnt_Venta t4 ON t4.IdVenta = t3.IdVenta
+          WHERE 
+            t4.IdDestino = t1.IdDestino AND 
+            t4.FechaViaje = t1.fecha AND 
+            t4.HoraSalida = t1.hora
+        ) AS TotalProduccion
+      FROM AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas t1
+      INNER JOIN AppPullmanFlorida.dbo.SGP_Mant_Destino t2 ON t2.IdDestino = t1.IdDestino
+      WHERE 
+        t1.estado = 1 AND 
+        t1.fecha BETWEEN '${fechaInicio}' AND '${fechaFin}' AND 
+        t1.IdConductor = ${idConductor}
+      ORDER BY t1.fecha, t1.hora ASC
+    `);
+    return result.recordset;
+  } catch (error) {
+    throw new Error('Error al obtener el resumen mensual: ' + error.message);
+  }
+}

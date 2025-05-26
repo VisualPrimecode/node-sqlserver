@@ -13,7 +13,8 @@ import {
         registrarDevolucion,
         obtenerCausasDevolucion,
         anularViajeSimulado,
-        asignarViajeAConductor
+        asignarViajeAConductor,
+        getResumenMensualPorConductor
       } from '../models/userModel.js';
 import { getConnection } from '../config/database.js';
 import path from 'path';
@@ -341,23 +342,7 @@ export const registrarGastoController = async (req, res) => {
     }
   }
 };
-export const obtenerTiposGastosController = async (req, res) => {
-  try {
-    console.log("📥 [INICIO] Consulta de tipos de gastos");
 
-    const tipos = await obtenerTiposGastos();
-
-    console.log("✅ Tipos de gasto obtenidos:", tipos.length);
-    res.status(200).json({
-      message: 'Tipos de gasto obtenidos correctamente.',
-      data: tipos,
-    });
-
-  } catch (error) {
-    console.error("🔥 [ERROR GENERAL]:", error.message);
-    res.status(500).json({ message: 'Error al obtener tipos de gasto.' });
-  }
-};
 export const obtenerCausasDevolucionController = async (req, res) => {
   try {
     console.log("📥 [INICIO] Consulta de causas de devolución");
@@ -436,4 +421,37 @@ export async function asignarViajeAConductorHandler(req, res) {
     console.error('[ERROR] al asignar viaje:', msg);
     return res.status(500).json({ message: 'Error interno al asignar el viaje.' });
   }
+  
 }
+// controllers/viajesController.js
+export const obtenerResumenMensual = async (req, res) => {
+  const idConductor = req.query.idConductor || 162;
+  const fechaInicio = req.query.fechaInicio || '01-05-2025';
+  const fechaFin = req.query.fechaFin || '31-05-2025';
+
+  try {
+    console.log("🚩 [DEBUG] Entrando a obtenerResumenMensual");
+    const resumen = await getResumenMensualPorConductor(idConductor, fechaInicio, fechaFin);
+    res.status(200).json(resumen);
+  } catch (error) {
+    console.error('❌ Error en obtenerResumenMensual:', error.message);
+    res.status(500).json({ message: 'Error al obtener el resumen mensual', error: error.message });
+  }
+};
+export const obtenerTiposGastosController = async (req, res) => {
+  try {
+    console.log("📥 [INICIO] Consulta de tipos de gastos");
+
+    const tipos = await obtenerTiposGastos();
+
+    console.log("✅ Tipos de gasto obtenidos:", tipos.length);
+    res.status(200).json({
+      message: 'Tipos de gasto obtenidos correctamente.',
+      data: tipos,
+    });
+
+  } catch (error) {
+    console.error("🔥 [ERROR GENERAL]:", error.message);
+    res.status(500).json({ message: 'Error al obtener tipos de gasto.' });
+  }
+};
