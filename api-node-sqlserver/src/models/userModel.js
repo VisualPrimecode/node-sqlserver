@@ -534,6 +534,7 @@ export async function asignarViajeAConductor({ idProgramacion, idConductor }) {
 
 
 }
+
 // models/viajesModel.js
 export async function getResumenMensualPorConductor(idConductor, fechaInicio, fechaFin) {
   try {
@@ -572,5 +573,26 @@ export async function getResumenMensualPorConductor(idConductor, fechaInicio, fe
     return result.recordset;
   } catch (error) {
     throw new Error('Error al obtener el resumen mensual: ' + error.message);
+  }
+}
+export async function getGastosPorConductor(idConductor, fechaInicio, fechaFin) {
+  try {
+    const pool = await getConnection();
+    const result = await pool.request().query(`
+     SELECT 
+    rg.Monto, 
+    rg.IdProgramacion
+FROM 
+    [PullmanFloridaApp].[dbo].[Vnt_RegistroGastos] rg
+INNER JOIN 
+    [AppPullmanFlorida].[dbo].[SGP_Prog_ProgSalidas] ps
+    ON ps.idProgramacion = rg.IdProgramacion
+WHERE 
+    ps.IdConductor = ${idConductor} and
+    ps.fecha BETWEEN '${fechaInicio}' AND '${fechaFin}';
+    `);
+    return result.recordset;
+  } catch (error) {
+    throw new Error('Error al obtener los gastos por conductor: ' + error.message);
   }
 }

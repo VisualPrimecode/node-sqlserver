@@ -14,7 +14,8 @@ import {
         obtenerCausasDevolucion,
         anularViajeSimulado,
         asignarViajeAConductor,
-        getResumenMensualPorConductor
+        getResumenMensualPorConductor,
+        getGastosPorConductor
       } from '../models/userModel.js';
 import { getConnection } from '../config/database.js';
 import path from 'path';
@@ -431,6 +432,7 @@ export const obtenerResumenMensual = async (req, res) => {
 
   try {
     console.log("🚩 [DEBUG] Entrando a obtenerResumenMensual");
+    console.log("🚩 [DEBUG] Parámetros recibidos:", { idConductor, fechaInicio, fechaFin });
     const resumen = await getResumenMensualPorConductor(idConductor, fechaInicio, fechaFin);
     res.status(200).json(resumen);
   } catch (error) {
@@ -455,3 +457,21 @@ export const obtenerTiposGastosController = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener tipos de gasto.' });
   }
 };
+export const obtenerGastosPorConductorController = async (req, res) => {
+  const { idConductor, fechaInicio, fechaFin } = req.query;
+
+  if (!idConductor || !fechaInicio || !fechaFin) {
+    return res.status(400).json({ message: 'Faltan parámetros obligatorios: idConductor, fechaInicio, fechaFin.' });
+  }
+
+  try {
+    console.log("🚩 [DEBUG] Entrando a obtenerGastosPorConductor");
+    console.log("🚩 [DEBUG] Parámetros recibidos:", { idConductor, fechaInicio, fechaFin });
+
+    const gastos = await getGastosPorConductor(idConductor, fechaInicio, fechaFin);
+    res.status(200).json(gastos);
+  } catch (error) {
+    console.error('❌ Error en obtenerGastosPorConductor:', error.message);
+    res.status(500).json({ message: 'Error al obtener los gastos del conductor', error: error.message });
+  }
+}
