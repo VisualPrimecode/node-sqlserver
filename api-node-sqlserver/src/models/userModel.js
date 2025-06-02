@@ -1,7 +1,7 @@
 import { getConnection } from '../config/database.js';
 import jwt from 'jsonwebtoken';
 import sql from 'mssql';
-
+/////
 
 export async function registrarDevolucion(devolucion) {
   const {
@@ -83,17 +83,17 @@ export async function getAllUsers() {
     throw new Error('Error al obtener usuarios: ' + err.message);
   }
 }
-export async function loginUser(email, password) {
+export async function loginUser(nombreUsuario, password) {
   try {
     const pool = await getConnection();
 
-    console.log('Obteniendo usuario con email:', email);
+    console.log('Obteniendo usuario de nombre user:', nombreUsuario);
 
     const userResult = await pool.request()
-      .input('email', email)
+      .input('nombreUser', nombreUsuario)
       .query(`
         SELECT 
-          IdUsuario,
+          IdUsuarioAnterior as 'IdUsuario',
           PassUsuario,
           EstadoUsuario,
           NombreUsuario,
@@ -103,7 +103,7 @@ export async function loginUser(email, password) {
           IdTipoUsuario,
           MailUsuario
         FROM PullmanFloridaApp.dbo.TB_Usuarios
-        WHERE MailUsuario = @email
+        WHERE NombreUsuario = @nombreUser
       `);
 
     if (userResult.recordset.length === 0) {
@@ -304,7 +304,7 @@ export async function getViajesPorFiltros({ idConductor, fecha, hora, idDestino,
       ${whereSQL}
       ORDER BY t1.hora ASC
     `);
-
+      console.log('Consulta ejecutada:', result.query);
     return result.recordset;
   } catch (error) {
     throw new Error('Error al obtener los viajes: ' + error.message);

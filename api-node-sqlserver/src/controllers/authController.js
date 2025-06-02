@@ -50,16 +50,16 @@ export const refreshTokenController = async (req, res) => {
 export const loginUserJWT = async (req, res) => {
   console.log('🔐 [loginUserJWT] Iniciado');
 
-  const { email, password } = req.body;
-  console.log('📧 Datos de login:', { email });
+  const { nombreUsuario, password } = req.body;
+  console.log('📧 Datos de login:', { nombreUsuario });
 
-  if (!email || !password) {
-    console.warn('⚠️ Faltan email o password');
-    return res.status(400).json({ message: 'Email y password requeridos' });
+  if (!nombreUsuario || !password) {
+    console.warn('⚠️ Faltan nombreUsuario o password');
+    return res.status(400).json({ message: 'nombreUsuario y password requeridos' });
   }
 
   try {
-    const user = await loginUserModel(email, password);
+    const user = await loginUserModel(nombreUsuario, password);
     console.log('👤 Resultado loginUserModel:', user);
 
     if (!user || user.error) {

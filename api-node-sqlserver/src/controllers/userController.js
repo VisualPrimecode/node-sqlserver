@@ -139,6 +139,24 @@ export const obtenerViajes = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener viajes', error: error.message });
   }
 };
+function convertirA24Horas(hora12) {
+  const match = hora12.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return undefined;
+
+  let [_, horas, minutos, ampm] = match;
+  horas = parseInt(horas);
+  minutos = parseInt(minutos);
+
+  if (ampm.toUpperCase() === 'PM' && horas !== 12) {
+    horas += 12;
+  } else if (ampm.toUpperCase() === 'AM' && horas === 12) {
+    horas = 0;
+  }
+
+  return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+}
+
+
 export const obtenerViajesConFiltros = async (req, res) => {
   try {
     console.log("🚩 [DEBUG] Entrando a obtenerViajesConFiltros");
@@ -154,13 +172,14 @@ export const obtenerViajesConFiltros = async (req, res) => {
     }
 
     const filtros = {
-      idConductor: idConductor ? parseInt(idConductor) : undefined,
-      fecha,
-      hora,
-      idDestino: idDestino ? parseInt(idDestino) : undefined,
-      estado: estado !== undefined ? parseInt(estado) : undefined, // <-- estado puede ser 0 o 1
-    };
+  idConductor: idConductor ? parseInt(idConductor) : undefined,
+  fecha,
+  hora: hora ? convertirA24Horas(hora) : undefined,
+  idDestino: idDestino ? parseInt(idDestino) : undefined,
+  estado: estado !== undefined ? parseInt(estado) : undefined,
+};
 
+    console.log("🚩 [DEBUG] Filtros normalizados:", filtros);
     const viajes = await getViajesPorFiltros(filtros);
     res.status(200).json(viajes);
   } catch (error) {
