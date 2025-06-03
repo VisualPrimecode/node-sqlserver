@@ -14,10 +14,11 @@ import {
         anularViajeHandler,
         asignarViajeAConductorHandler,
         obtenerResumenMensual,
-        obtenerGastosPorConductorController
+        obtenerGastosPorConductorController,
+        marcarEstadoViaje
  } from '../controllers/userController.js';
 import { verificarToken } from '../middleware/authMiddleware.js'; // <-- Importa middleware
-import {loginUserJWT, refreshTokenController} from '../controllers/authController.js';
+import {loginUserJWT, refreshTokenController, validarTokenHandler} from '../controllers/authController.js';
 
 
 const router = Router();
@@ -38,7 +39,11 @@ router.get('/causasDevolucion', obtenerCausasDevolucionController);
 router.post('/anularViaje', anularViajeHandler); 
 router.post('/asignarViajeConductor', asignarViajeAConductorHandler);
 router.get('/obtenerResumen', obtenerResumenMensual);
-router.get('/obtenerGastosConductor', obtenerGastosPorConductorController); // <-- Cambia la ruta a la que necesites
+router.get('/obtenerGastosConductor', obtenerGastosPorConductorController);
+router.post('/marcarEstadoViaje', marcarEstadoViaje); 
+router.get('/validar-token', verificarToken, validarTokenHandler); // <-- Nueva ruta para validar token
+
+ // <-- Cambia la ruta a la que necesites
 // <-- Cambia la ruta a la que necesites
 
 

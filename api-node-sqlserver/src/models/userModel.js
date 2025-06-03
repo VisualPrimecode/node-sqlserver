@@ -596,3 +596,35 @@ WHERE
     throw new Error('Error al obtener los gastos por conductor: ' + error.message);
   }
 }
+export async function actualizarEstadoViaje({ idProgramacion, accion }) {
+  try {
+    const pool = await getConnection();
+    const request = pool.request();
+
+    request.input('idProgramacion', idProgramacion);
+
+    let updateQuery = '';
+
+    if (accion === 'iniciar') {
+      updateQuery = `
+        UPDATE AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas
+        SET ViajeActivo = 1, ViajeFinalizado = 0
+        WHERE idProgramacion = @idProgramacion
+      `;
+    } else if (accion === 'finalizar') {
+      updateQuery = `
+        UPDATE AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas
+        SET ViajeFinalizado = 1
+        WHERE idProgramacion = @idProgramacion
+      `;
+    } else {
+      throw new Error('Acción inválida. Debe ser "iniciar" o "finalizar".');
+    }
+
+    await request.query(updateQuery);
+
+    return { success: true, message: `Viaje ${accion} correctamente.` };
+  } catch (error) {
+    throw new Error('Error al actualizar estado del viaje: ' + error.message);
+  }
+}

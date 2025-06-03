@@ -15,7 +15,8 @@ import {
         anularViajeSimulado,
         asignarViajeAConductor,
         getResumenMensualPorConductor,
-        getGastosPorConductor
+        getGastosPorConductor,
+        actualizarEstadoViaje
       } from '../models/userModel.js';
 import { getConnection } from '../config/database.js';
 import path from 'path';
@@ -516,3 +517,31 @@ export const obtenerGastosPorConductorController = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener los gastos del conductor', error: error.message });
   }
 }
+export const marcarEstadoViaje = async (req, res) => {
+  try {
+    console.log("🚩 [DEBUG] Entrando a marcarEstadoViaje");
+    console.log("🚩 [DEBUG] Body recibido:", req.body);
+
+    const { idProgramacion, accion } = req.body;
+
+    // Validaciones básicas
+    if (!idProgramacion || !accion) {
+      return res.status(400).json({ message: 'Se requieren los campos idProgramacion y accion.' });
+    }
+
+    if (!['iniciar', 'finalizar'].includes(accion)) {
+      return res.status(400).json({ message: 'La acción debe ser "iniciar" o "finalizar".' });
+    }
+
+    const result = await actualizarEstadoViaje({ idProgramacion: parseInt(idProgramacion), accion });
+
+    res.status(200).json({
+      message: result.message,
+      success: true,
+    });
+
+  } catch (error) {
+    console.error('❌ Error en marcarEstadoViaje:', error.message);
+    res.status(500).json({ message: 'Error al actualizar estado del viaje', error: error.message });
+  }
+};

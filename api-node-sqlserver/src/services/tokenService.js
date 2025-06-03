@@ -6,8 +6,10 @@ export const guardarRefreshToken = async (userId, refreshToken) => {
   const pool = await getConnection();
 
   // Puedes definir aquí cuánto dura el token (ej: 7 días)
-  const fechaExpiracion = new Date();
-  fechaExpiracion.setDate(fechaExpiracion.getDate() + 7);
+const fechaExpiracion = new Date(Date.now() + 24 * 60 * 60 * 1000); // +1 día en milisegundos
+
+// NO hacer ajuste manual
+
 
   await pool.request()
     .input('IdUsuario', userId)
@@ -32,7 +34,7 @@ export const validarRefreshToken = async (userId, refreshToken) => {
       FROM PullmanFloridaApp.dbo.TB_RefreshTokens
       WHERE IdUsuario = @IdUsuario
         AND Token = @Token
-        AND (ExpiraEn IS NULL OR ExpiraEn > GETDATE())
+        AND (ExpiraEn IS NULL OR ExpiraEn > GETUTCDATE())
     `);
 
   const valido = result.recordset.length > 0;

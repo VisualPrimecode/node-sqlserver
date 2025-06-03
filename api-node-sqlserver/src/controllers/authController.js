@@ -44,6 +44,10 @@ export const refreshTokenController = async (req, res) => {
     return res.status(500).json({ message: 'Error interno', error: error.message });
   }
 };
+export const validarTokenHandler = (req, res) => {
+  console.log('🔍 [validarTokenHandler] Iniciado');
+  return res.status(200).json({ message: 'Token válido' });
+};
 
 
 // LOGIN JWT CONTROLLER
@@ -83,7 +87,7 @@ export const loginUserJWT = async (req, res) => {
         tipo: user.IdTipoUsuario,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '60s' }
+      { expiresIn: '30m' }
     );
 
     const refreshToken = crypto.randomBytes(64).toString('hex');
