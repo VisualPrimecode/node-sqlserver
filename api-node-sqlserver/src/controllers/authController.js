@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { guardarRefreshToken, validarRefreshToken } from '../services/tokenService.js';
-import { loginUser as loginUserModel} from '../models/userModel.js'; // ¡No olvides este import si aún no lo tienes!
+import { loginUser as loginUserModel, getUserById} from '../models/userModel.js'; // ¡No olvides este import si aún no lo tienes!
 
 // REFRESH TOKEN CONTROLLER
 export const refreshTokenController = async (req, res) => {
@@ -23,13 +23,22 @@ export const refreshTokenController = async (req, res) => {
       console.warn('❌ Token inválido');
       return res.status(403).json({ message: 'Refresh token inválido o expirado' });
     }
+    const user = await getUserById(userId);
+
+if (!user) {
+  return res.status(404).json({ message: 'Usuario no encontrado' });
+}
+
 
     const newAccessToken = jwt.sign(
-      { id: userId },
-      process.env.JWT_SECRET,
-      { expiresIn: '60s' }
-    );
-
+  {
+    id: user.IdUsuario,
+    email: user.MailUsuario,
+    tipo: user.IdTipoUsuario,
+  },
+  process.env.JWT_SECRET,
+  { expiresIn: '30m' }
+);
     const newRefreshToken = crypto.randomBytes(64).toString('hex');
     await guardarRefreshToken(userId, newRefreshToken);
     console.log('🔐 Nuevo refresh token generado y guardado');

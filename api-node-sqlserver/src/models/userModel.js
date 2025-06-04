@@ -83,6 +83,32 @@ export async function getAllUsers() {
     throw new Error('Error al obtener usuarios: ' + err.message);
   }
 }
+export async function getUserById(idUsuario) {
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('idUsuario', idUsuario)
+      .query(`
+        SELECT 
+          IdUsuario,
+          NombreUsuario,
+          PassUsuario,
+          NombresUsuario,
+          ApellidoPaterno,
+          ApellidoMaterno,
+          IdTipoUsuario,
+          MailUsuario,
+          EstadoUsuario
+        FROM PullmanFloridaApp.dbo.TB_Usuarios
+        WHERE IdUsuario = @idUsuario
+      `);
+
+    return result.recordset[0]; // Retorna solo un usuario
+  } catch (err) {
+    throw new Error('Error al obtener usuario por ID: ' + err.message);
+  }
+}
+
 export async function loginUser(nombreUsuario, password) {
   try {
     const pool = await getConnection();
@@ -291,7 +317,7 @@ export async function getViajesPorFiltros({ idConductor, fecha, hora, idDestino,
         t1.fecha, 
         t2.NomDestino, 
         t1.IdConductor,
-        CONCAT(t4.FirstName, ' ', t4.LastName) AS nombreConductor,
+        CONCAT(t4.FirstName,' ',t4.LastName) AS nombreConductor,
         CASE WHEN t1.ViajeActivo = 0 THEN 'En espera' ELSE 'Activo' END AS Iniciado,
         CASE WHEN t1.ViajeFinalizado = 1 THEN 'Finalizado' ELSE 'Activo' END AS Finalizado,
         t3.Ppu,
@@ -397,10 +423,10 @@ export async function getConductoresActivos() {
     const result = await pool.request().query(`
       SELECT 
         IdUser AS idConductor,
-        CONCAT(FirstName, ' ', LastName) AS nombre
+        CONCAT(LastName,' ',FirstName) AS nombre
       FROM AppPullmanFlorida.dbo.UM_Users
       WHERE IdUserLevel = 9 AND status = 1
-      ORDER BY FirstName, LastName
+      ORDER BY LastName
     `);
 
     return result.recordset;
