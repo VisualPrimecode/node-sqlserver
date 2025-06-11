@@ -16,11 +16,13 @@ import {
         asignarViajeAConductor,
         getResumenMensualPorConductor,
         getGastosPorConductor,
-        actualizarEstadoViaje
+        actualizarEstadoViaje,
+        obtenerDatosQRPorIdVenta
       } from '../models/userModel.js';
 import { getConnection } from '../config/database.js';
 import path from 'path';
 import fs from 'fs';
+import QRCode from 'qrcode';
 
 export async function registrarDevolucionHandler(req, res) {
   const {
@@ -217,12 +219,14 @@ return res.status(400).json({ message: mensaje, detalles: [mensaje] });
     }
 
     const partes = codigo.split(',');
+        console.log('llego hasta aca1')
 
     if (partes.length !== 5) {
       const mensaje = `Formato incorrecto: se esperaban 5 valores (tripId,idVenta,fecha,hora,asiento) pero se recibieron ${partes.length}`;
       await registrarFallo(pool, 0, idUsuario, mensaje);
       return res.status(400).json({ message: mensaje, recibido: partes });
     }
+        console.log('llego hasta acaaux')
 
     const [qrTripId, qrIdVenta, qrFecha, qrHora, qrAsiento] = partes;
 
@@ -243,6 +247,7 @@ return res.status(400).json({ message: mensaje, detalles: [mensaje] });
       });
     }
 
+    console.log('llego hasta aca2')
     const errores = [];
 
     if (qrTripId !== String(tripId)) {
@@ -259,6 +264,7 @@ return res.status(400).json({ message: mensaje, detalles: [mensaje] });
     if (horaQR !== horaEsperada) {
       errores.push(`hora inválida: se esperaba '${horaEsperada}' pero se recibió '${horaQR}'`);
     }
+        console.log('llego hasta aca4')
 
     if (errores.length > 0) {
       const mensaje = 'Datos del código QR no coinciden con los esperados';
@@ -310,6 +316,7 @@ async function registrarFallo(pool, idVenta, idUsuario, mensaje) {
 
 export async function listUsers(req, res) {
   try {
+    console.log("🚩 [DEBUG] Entrando a listUsers");
     const users = await getAllUsers();
     res.status(200).json(users);
   } catch (error) {
@@ -543,5 +550,59 @@ export const marcarEstadoViaje = async (req, res) => {
   } catch (error) {
     console.error('❌ Error en marcarEstadoViaje:', error.message);
     res.status(500).json({ message: 'Error al actualizar estado del viaje', error: error.message });
+  }
+};
+export const obtenerDatosQRController = async (req, res) => {
+  const { idVenta } = req.params; // o req.query / req.body según tu preferencia
+  console.log("🚩 [DEBUG] Entrando a obtenerDatosQRController");
+  if (!idVenta) {
+    return res.status(400).json({ message: 'Se requiere el parámetro idVenta' });
+  }
+
+  try {
+    const datosQR = await obtenerDatosQRPorIdVenta(parseInt(idVenta));
+
+    return res.status(200).json({
+      message: 'Datos para QR obtenidos correctamente',
+      datos: datosQR
+    });
+  } catch (error) {
+    console.error('❌ Error en obtenerDatosQRController:', error.message);
+    return res.status(500).json({
+      message: 'Error al obtener datos para el QR',
+      error: error.message
+    });
+  }
+};
+export const generarQRDesdeVenta = async (req, res) => {
+  const { idVenta } = req.params;
+
+  if (!idVenta) {
+    return res.status(400).json({ message: 'Se requiere el parámetro idVenta' });
+  }
+
+  try {
+    const datos = await obtenerDatosQRPorIdVenta(parseInt(idVenta));
+
+    if (!datos) {
+      return res.status(404).json({ message: 'No se encontraron datos para ese idVenta' });
+    }
+
+    const contenidoQR = `${datos.idProgramacion},${datos.idVenta},${datos.fecha},${datos.hora},${datos.asiento}`;
+
+    // Generar imagen QR en base64
+    const qrDataURL = await QRCode.toDataURL(contenidoQR);
+
+    return res.status(200).json({
+      message: 'QR generado correctamente',
+      contenido: contenidoQR,
+      qrBase64: qrDataURL
+    });
+  } catch (error) {
+    console.error('❌ Error al generar QR:', error.message);
+    return res.status(500).json({
+      message: 'Error al generar QR',
+      error: error.message
+    });
   }
 };

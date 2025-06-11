@@ -3,64 +3,6 @@ import jwt from 'jsonwebtoken';
 import sql from 'mssql';
 /////
 
-export async function registrarDevolucion(devolucion) {
-  const {
-    idVenta,
-    fechaDevolucion,
-    monto,
-    fechaTransferencia = null,
-    numeroTransaccion = null,
-    idUsuario,
-    comentario = null,
-    idCausaDevolucion = null
-  } = devolucion;
-
-  try {
-    const pool = await getConnection();
-
-    // Verificar si el IdVenta existe y si el registro no está anulado
-    const ventaResult = await pool.request()
-      .input('IdVenta', sql.Int, idVenta)
-      .query(`
-        SELECT Anulado
-        FROM AppPullmanFlorida.dbo.SGP_Vnt_Venta
-        WHERE IdVenta = @IdVenta
-      `);
-
-    if (ventaResult.recordset.length === 0) {
-      throw new Error('No se encontró ningún registro de venta con el IdVenta proporcionado.');
-    }
-
-    const venta = ventaResult.recordset[0];
-
-    if (venta.Anulado) {
-      throw new Error('El boleto ya está anulado en SGP_Vnt_Venta.');
-    }
-
-    console.log(`(Simulación) Se habría anulado el boleto con IdVenta: ${idVenta}`);
-
-    // Insertar en TB_Devoluciones (idVenta se usará como "NumeroBoleto")
-    await pool.request()
-      .input('NumeroBoleto', sql.NVarChar, idVenta.toString()) // 👈 Se guarda como string
-      .input('FechaDevolucion', sql.Date, fechaDevolucion)
-      .input('Monto', sql.Decimal(10, 2), monto)
-      .input('FechaTransferencia', sql.Date, fechaTransferencia)
-      .input('NumeroTransaccion', sql.NVarChar, numeroTransaccion)
-      .input('IdUsuario', sql.Int, idUsuario)
-      .input('Comentario', sql.NVarChar, comentario)
-      .input('IdCausaDevolucion', sql.Int, idCausaDevolucion)
-      .query(`
-        INSERT INTO PullmanFloridaApp.dbo.TB_Devoluciones 
-        (NumeroBoleto, FechaDevolucion, Monto, FechaTransferencia, NumeroTransaccion, IdUsuario, Comentario, IdCausaDevolucion)
-        VALUES (@NumeroBoleto, @FechaDevolucion, @Monto, @FechaTransferencia, @NumeroTransaccion, @IdUsuario, @Comentario, @IdCausaDevolucion)
-      `);
-
-    return { success: true };
-
-  } catch (err) {
-    throw new Error('Error al registrar la devolución: ' + err.message);
-  }
-}
 
 export async function getAllUsers() {
   try {
@@ -161,6 +103,64 @@ export async function loginUser(nombreUsuario, password) {
   } catch (err) {
     console.error('Error en login:', err.message);
     throw new Error('Error en login: ' + err.message);
+  }
+}
+export async function registrarDevolucion(devolucion) {
+  const {
+    idVenta,
+    fechaDevolucion,
+    monto,
+    fechaTransferencia = null,
+    numeroTransaccion = null,
+    idUsuario,
+    comentario = null,
+    idCausaDevolucion = null
+  } = devolucion;
+
+  try {
+    const pool = await getConnection();
+
+    // Verificar si el IdVenta existe y si el registro no está anulado
+    const ventaResult = await pool.request()
+      .input('IdVenta', sql.Int, idVenta)
+      .query(`
+        SELECT Anulado
+        FROM AppPullmanFlorida.dbo.SGP_Vnt_Venta
+        WHERE IdVenta = @IdVenta
+      `);
+
+    if (ventaResult.recordset.length === 0) {
+      throw new Error('No se encontró ningún registro de venta con el IdVenta proporcionado.');
+    }
+
+    const venta = ventaResult.recordset[0];
+
+    if (venta.Anulado) {
+      throw new Error('El boleto ya está anulado en SGP_Vnt_Venta.');
+    }
+
+    console.log(`(Simulación) Se habría anulado el boleto con IdVenta: ${idVenta}`);
+
+    // Insertar en TB_Devoluciones (idVenta se usará como "NumeroBoleto")
+    await pool.request()
+      .input('NumeroBoleto', sql.NVarChar, idVenta.toString()) // 👈 Se guarda como string
+      .input('FechaDevolucion', sql.Date, fechaDevolucion)
+      .input('Monto', sql.Decimal(10, 2), monto)
+      .input('FechaTransferencia', sql.Date, fechaTransferencia)
+      .input('NumeroTransaccion', sql.NVarChar, numeroTransaccion)
+      .input('IdUsuario', sql.Int, idUsuario)
+      .input('Comentario', sql.NVarChar, comentario)
+      .input('IdCausaDevolucion', sql.Int, idCausaDevolucion)
+      .query(`
+        INSERT INTO PullmanFloridaApp.dbo.TB_Devoluciones 
+        (NumeroBoleto, FechaDevolucion, Monto, FechaTransferencia, NumeroTransaccion, IdUsuario, Comentario, IdCausaDevolucion)
+        VALUES (@NumeroBoleto, @FechaDevolucion, @Monto, @FechaTransferencia, @NumeroTransaccion, @IdUsuario, @Comentario, @IdCausaDevolucion)
+      `);
+
+    return { success: true };
+
+  } catch (err) {
+    throw new Error('Error al registrar la devolución: ' + err.message);
   }
 }
 
@@ -654,3 +654,59 @@ export async function actualizarEstadoViaje({ idProgramacion, accion }) {
     throw new Error('Error al actualizar estado del viaje: ' + error.message);
   }
 }
+
+
+export async function obtenerDatosQRPorIdVenta(idVenta) {
+  try {
+    console.log('➡️ Obteniendo datos para el QR con ID Venta:', idVenta);
+    const pool = await getConnection();
+
+    // 1. Obtener datos de la venta
+    const ventaResult = await pool.request()
+      .input('idVenta', sql.Int, idVenta)
+      .query(`
+        SELECT v.FechaViaje, v.HoraSalida, v.IdDestino, v.Asiento
+        FROM AppPullmanFlorida.dbo.SGP_Vnt_Venta v
+        WHERE v.IdVenta = @idVenta
+      `);
+
+    if (ventaResult.recordset.length === 0) {
+      throw new Error(`No se encontró una venta con el IdVenta ${idVenta}`);
+    }
+
+    const venta = ventaResult.recordset[0];
+
+    // Formatear fecha a 'YYYY-MM-DD'
+    const fechaFormateada = venta.FechaViaje.toISOString().split('T')[0];
+
+    // 2. Obtener el idProgramacion correspondiente
+    const programacionResult = await pool.request()
+      .input('fecha', sql.Date, venta.FechaViaje)
+      .input('hora', sql.VarChar(5), venta.HoraSalida)
+      .input('idDestino', sql.Int, venta.IdDestino)
+      .query(`
+        SELECT idProgramacion
+        FROM AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas
+        WHERE fecha = @fecha AND hora = @hora AND IdDestino = @idDestino
+      `);
+
+    if (programacionResult.recordset.length === 0) {
+      throw new Error(`No se encontró una programación para la fecha ${venta.FechaViaje}, hora ${venta.HoraSalida} y destino ${venta.IdDestino}`);
+    }
+
+    const idProgramacion = programacionResult.recordset[0].idProgramacion;
+
+    // 3. Retornar datos necesarios para generar el QR
+    return {
+      idVenta,
+      idProgramacion,
+      fecha: fechaFormateada,
+      hora: venta.HoraSalida,
+      asiento: venta.Asiento
+    };
+
+  } catch (error) {
+    throw new Error(`Error al obtener datos para el QR: ${error.message}`);
+  }
+}
+

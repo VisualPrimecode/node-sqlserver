@@ -15,7 +15,9 @@ import {
         asignarViajeAConductorHandler,
         obtenerResumenMensual,
         obtenerGastosPorConductorController,
-        marcarEstadoViaje
+        marcarEstadoViaje,
+        obtenerDatosQRController,
+        generarQRDesdeVenta
  } from '../controllers/userController.js';
 import { verificarToken } from '../middleware/authMiddleware.js'; // <-- Importa middleware
 import {loginUserJWT, refreshTokenController, validarTokenHandler} from '../controllers/authController.js';
@@ -41,7 +43,8 @@ router.post('/asignarViajeConductor', asignarViajeAConductorHandler);
 router.get('/obtenerResumen', obtenerResumenMensual);
 router.get('/obtenerGastosConductor', obtenerGastosPorConductorController);
 router.post('/marcarEstadoViaje', marcarEstadoViaje); 
-router.get('/validar-token', verificarToken, validarTokenHandler); // <-- Nueva ruta para validar token
+router.get('/validar-token', verificarToken, validarTokenHandler);
+router.get('/datosQR/:idVenta', generarQRDesdeVenta); // NUEVA RUTA
 
  // <-- Cambia la ruta a la que necesites
 // <-- Cambia la ruta a la que necesites
