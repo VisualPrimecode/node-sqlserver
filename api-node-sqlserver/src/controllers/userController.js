@@ -202,52 +202,47 @@ export const registrarCodigoQRController = async (req, res) => {
   const { codigo, tripId, tripDate, tripTime, idUsuario } = req.body;
   const pool = await getConnection();
 
-  if (!codigo) {
+  if (!codigo || codigo.trim() === '') {
     const mensaje = 'Código QR requerido';
-    await registrarFallo(pool, 0, idUsuario, mensaje);
+    await registrarFallo(pool, null, idUsuario, mensaje);
     return res.status(400).json({ message: mensaje });
   }
 
   console.log('➡️ Código QR recibido:', codigo);
 
   try {
-    // Validar si el QR parece una URL u otro texto plano no estructurado
     if (/^https?:\/\//i.test(codigo.trim())) {
-      const mensaje = 'Código QR no válido: contenido no contiene la estructura de codigo esperada';
-      await registrarFallo(pool, 0, idUsuario, mensaje);
-return res.status(400).json({ message: mensaje, detalles: [mensaje] });
+      const mensaje = 'Código QR no válido: contiene una URL no esperada';
+      await registrarFallo(pool, null, idUsuario, mensaje);
+      return res.status(400).json({ message: mensaje, detalles: [mensaje] });
     }
 
     const partes = codigo.split(',');
-        console.log('llego hasta aca1')
 
     if (partes.length !== 5) {
       const mensaje = `Formato incorrecto: se esperaban 5 valores (tripId,idVenta,fecha,hora,asiento) pero se recibieron ${partes.length}`;
-      await registrarFallo(pool, 0, idUsuario, mensaje);
+      await registrarFallo(pool, null, idUsuario, mensaje);
       return res.status(400).json({ message: mensaje, recibido: partes });
     }
-        console.log('llego hasta acaaux')
 
     const [qrTripId, qrIdVenta, qrFecha, qrHora, qrAsiento] = partes;
 
-    // Validar tipos/formato básico de cada campo
     const formatoValido =
       /^\d+$/.test(qrTripId) &&
       /^\d+$/.test(qrIdVenta) &&
       /^\d+$/.test(qrAsiento) &&
-      /^\d{4}-\d{2}-\d{2}$/.test(qrFecha) && // fecha en formato YYYY-MM-DD
-      /^\d{2}:\d{2}/.test(qrHora);          // hora en formato HH:mm
+      /^\d{4}-\d{2}-\d{2}$/.test(qrFecha) &&
+      /^\d{2}:\d{2}/.test(qrHora);
 
     if (!formatoValido) {
       const mensaje = 'El código QR escaneado tiene un formato inválido o datos corruptos';
-      await registrarFallo(pool, 0, idUsuario, mensaje);
+      await registrarFallo(pool, qrIdVenta, idUsuario, mensaje);
       return res.status(400).json({
         message: mensaje,
         recibido: partes
       });
     }
 
-    console.log('llego hasta aca2')
     const errores = [];
 
     if (qrTripId !== String(tripId)) {
@@ -264,7 +259,6 @@ return res.status(400).json({ message: mensaje, detalles: [mensaje] });
     if (horaQR !== horaEsperada) {
       errores.push(`hora inválida: se esperaba '${horaEsperada}' pero se recibió '${horaQR}'`);
     }
-        console.log('llego hasta aca4')
 
     if (errores.length > 0) {
       const mensaje = 'Datos del código QR no coinciden con los esperados';
@@ -292,7 +286,11 @@ return res.status(400).json({ message: mensaje, detalles: [mensaje] });
     const status = esErrorDatos ? 400 : 500;
 
     console.error('🔥 Excepción al registrar código QR:', mensaje);
-    await registrarFallo(pool, 0, idUsuario, mensaje);
+
+    // ⛔️ Solo registrar si el error no fue marcado como ya manejado
+    if (!error._handled) {
+      await registrarFallo(pool, null, idUsuario, mensaje);
+    }
 
     return res.status(status).json({
       message: 'Error en el registro del código QR',
@@ -301,12 +299,10 @@ return res.status(400).json({ message: mensaje, detalles: [mensaje] });
   }
 };
 
-
-
 async function registrarFallo(pool, idVenta, idUsuario, mensaje) {
   try {
-    const ventaFinal = idVenta ?? 'SIN_ID';
-    const usuarioFinal = idUsuario ?? 'SIN_USUARIO';
+    const ventaFinal = idVenta && String(idVenta).trim() !== '' ? idVenta : null;
+    const usuarioFinal = idUsuario && String(idUsuario).trim() !== '' ? idUsuario : null;
     await registrarError(pool, ventaFinal, usuarioFinal, mensaje);
   } catch (err) {
     console.error('❌ Error al intentar registrar un fallo desde el controlador:', err.message);

@@ -168,6 +168,16 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario, numAsiento) {
   console.log('➡️ Registrando código QR con ID Venta:', idVenta, 'ID Usuario:', idUsuario, 'y Asiento:', numAsiento);
 
   try {
+    // ⚠️ Validar que el ID de venta no esté vacío o inválido
+    if (!idVenta || String(idVenta).trim() === '') {
+      const mensaje = 'ID de venta vacío o inválido recibido desde el QR';
+      const error = new Error(mensaje);
+      error._handled = true;
+      console.warn('⚠️', mensaje);
+      await registrarError(pool, null, idUsuario, mensaje); // No registrar con idVenta inválido
+      throw error;
+    }
+
     // Verificar si ya está registrado
     const checkResult = await pool.request()
       .input('IDVENTA', idVenta)
@@ -179,12 +189,14 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario, numAsiento) {
 
     if (checkResult.recordset[0].count > 0) {
       const mensaje = 'ID de venta duplicado: ya existe en Vnt_RegistroBoletos';
+      const error = new Error(mensaje);
+      error._handled = true;
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
-      throw new Error(mensaje);
+      throw error;
     }
 
-    // Verificar existencia, anulación y número de asiento
+    // Verificar existencia de la venta
     const ventaResult = await pool.request()
       .input('IDVENTA', idVenta)
       .query(`
@@ -195,28 +207,34 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario, numAsiento) {
 
     if (ventaResult.recordset.length === 0) {
       const mensaje = 'ID de venta no existe en SGP_Vnt_Venta';
+      const error = new Error(mensaje);
+      error._handled = true;
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
-      throw new Error(mensaje);
+      throw error;
     }
 
     const { Anulado: anulado, Asiento: asientoRegistrado } = ventaResult.recordset[0];
 
     if (anulado) {
       const mensaje = 'La venta está anulada en SGP_Vnt_Venta';
+      const error = new Error(mensaje);
+      error._handled = true;
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
-      throw new Error(mensaje);
+      throw error;
     }
 
     if (String(asientoRegistrado) !== String(numAsiento)) {
       const mensaje = `Asiento inválido: se esperaba '${asientoRegistrado}' pero se recibió '${numAsiento}'`;
+      const error = new Error(mensaje);
+      error._handled = true;
       console.warn('⚠️', mensaje);
       await registrarError(pool, idVenta, idUsuario, mensaje);
-      throw new Error(mensaje);
+      throw error;
     }
 
-    // Insertar el registro válido
+    // Insertar el registro válido si pasó todas las validaciones
     await pool.request()
       .input('IDVENTA', idVenta)
       .input('IDUSUARIO', idUsuario)
@@ -225,11 +243,13 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario, numAsiento) {
         VALUES (@IDVENTA, @IDUSUARIO, GETDATE())
       `);
 
+    console.log('✅ Registro QR insertado correctamente');
     return true;
 
   } catch (err) {
     console.error('❌ Error en registrarCodigoQR:', err.message);
     if (!err._handled) {
+      // Registrar error solo si no fue registrado previamente
       await registrarError(pool, idVenta, idUsuario, err.message);
     }
     throw err;
@@ -238,16 +258,18 @@ export async function registrarCodigoQR(pool, idVenta, idUsuario, numAsiento) {
 
 
 
-// Función auxiliar para registrar en Vnt_RegistroFallido
 export async function registrarError(pool, idVenta, idUsuario, tipoError) {
-  await pool.request()
+  const result = await pool.request()
     .input('IDVENTA', idVenta)
     .input('IDUSUARIO', idUsuario)
     .input('tipoerror', tipoError)
     .query(`
       INSERT INTO PullmanFloridaApp.dbo.Vnt_RegistroFallido (IdVenta, IdUsuario, FechaRegistro, TipoError)
+      OUTPUT INSERTED.IdRegistroFallido
       VALUES (@IDVENTA, @IDUSUARIO, GETDATE(), @tipoerror)
     `);
+
+  console.log('🆔 ID registro fallido insertado:', result.recordset[0].IdRegistroFallido);
 }
 
 export async function getViajesPorConductorYFecha(idConductor, fecha) {
