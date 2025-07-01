@@ -328,7 +328,7 @@ export const registrarGastoController = async (req, res) => {
   try {
     console.log("📥 [INICIO] Petición recibida");
 
-    const { idTipoGasto, monto, idProgramacion } = req.body;
+    const { idTipoGasto, monto, idProgramacion, comentarios  } = req.body;
     const file = req.files?.comprobante;
 
     console.log("📦 Datos recibidos:", { idTipoGasto, monto, idProgramacion });
@@ -377,7 +377,7 @@ export const registrarGastoController = async (req, res) => {
     }
 
     console.log("📝 Registrando en base de datos...");
-    const resultado = await registrarGasto(idProgramacion, idTipoGasto, monto, comprobanteRuta);
+    const resultado = await registrarGasto(idProgramacion, idTipoGasto, monto, comprobanteRuta, comentarios);
 
     console.log("✅ Registro exitoso:", resultado);
     res.status(200).json({

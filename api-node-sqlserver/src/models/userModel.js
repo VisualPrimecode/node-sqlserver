@@ -362,20 +362,21 @@ export async function getAsientosPorProgramacion(idProgramacion) {
 
 }
 
-export async function registrarGasto(idProgramacion, idTipoGasto, monto, comprobanteRuta) {
+export async function registrarGasto(idProgramacion, idTipoGasto, monto, comprobanteRuta, comentarios = null) {
   try {
     const pool = await getConnection();
     const query = `
       INSERT INTO PullmanFloridaApp.dbo.Vnt_RegistroGastos 
-      (IdProgramacion, IdTipoGasto, Monto, FechaRegistro, ComprobanteRuta)
-      VALUES (@idProgramacion, @idTipoGasto, @monto, GETDATE(), @comprobanteRuta);
+      (IdProgramacion, IdTipoGasto, Monto, FechaRegistro, ComprobanteRuta, Comentarios)
+      VALUES (@idProgramacion, @idTipoGasto, @monto, GETDATE(), @comprobanteRuta, @comentarios);
     `;
 
     const request = pool.request();
     request.input('idProgramacion', idProgramacion);
-    request.input('idTipoGasto', idTipoGasto); // <- cambio aquí
+    request.input('idTipoGasto', idTipoGasto);
     request.input('monto', monto);
     request.input('comprobanteRuta', comprobanteRuta);
+    request.input('comentarios', comentarios); // nuevo campo opcional
 
     await request.query(query);
 
@@ -390,7 +391,7 @@ export async function obtenerTiposGastos() {
   try {
     const pool = await getConnection();
     const result = await pool.request().query(`
-      SELECT IdTipoGasto, NombreTipo FROM PullmanFloridaApp.dbo.TB_TipoGastos ORDER BY IdTipoGasto ASC;
+      SELECT IdTipoGasto, NombreTipo FROM PullmanFloridaApp.dbo.TB_TipoGastos ORDER BY NombreTipo ASC;
     `);
 
     return result.recordset;
