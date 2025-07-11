@@ -17,7 +17,12 @@ import {
         getResumenMensualPorConductor,
         getGastosPorConductor,
         actualizarEstadoViaje,
-        obtenerDatosQRPorIdVenta
+        obtenerDatosQRPorIdVenta,
+        getDetalleProduccion,
+        getDetalleEntregaDinero,
+        getDetalleGastos
+
+
       } from '../models/userModel.js';
 import { getConnection } from '../config/database.js';
 import path from 'path';
@@ -485,6 +490,7 @@ export const obtenerResumenMensual = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener el resumen mensual', error: error.message });
   }
 };
+//antiguo obtenerTiposGastosController
 export const obtenerTiposGastosController = async (req, res) => {
   try {
     console.log("📥 [INICIO] Consulta de tipos de gastos");
@@ -502,6 +508,62 @@ export const obtenerTiposGastosController = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener tipos de gasto.' });
   }
 };
+
+export const getDetalleProduccionHandler = async (req, res) => {
+  console.log("🚩 [DEBUG] Entrando a getDetalleProduccionHandler");
+
+  const { idConductor, fecha } = req.query;
+
+  if (!idConductor || !fecha) {
+    return res.status(400).json({ message: 'Faltan parámetros: idConductor y fecha son obligatorios' });
+  }
+
+  try {
+    const data = await getDetalleProduccion(parseInt(idConductor), fecha);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('[ERROR] al obtener detalle de producción:', error.message);
+    res.status(500).json({ message: 'Error interno al obtener detalle de producción' });
+  }
+};
+
+export const getDetalleEntregaDineroHandler = async (req, res) => {
+  console.log("🚩 [DEBUG] Entrando a getDetalleEntregaDineroHandler");
+
+  const { idConductor, fecha } = req.query;
+
+  if (!idConductor || !fecha) {
+    return res.status(400).json({ message: 'Faltan parámetros: idConductor y fecha son obligatorios' });
+  }
+
+  try {
+    const data = await getDetalleEntregaDinero(parseInt(idConductor), fecha);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('[ERROR] al obtener detalle de entrega de dinero:', error.message);
+    res.status(500).json({ message: 'Error interno al obtener detalle de entrega de dinero' });
+  }
+};
+
+
+export const getDetalleGastosHandler = async (req, res) => {
+
+  const { idConductor, fecha } = req.query;
+  console.log("🚩 [DEBUG] Parámetros recibidos:", { idConductor, fecha });
+  if (!idConductor || !fecha) {
+    return res.status(400).json({ message: 'Faltan parámetros: idConductor y fecha son obligatorios' });
+  }
+
+  try {
+    const data = await getDetalleGastos(parseInt(idConductor), fecha);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('[ERROR] al obtener detalle de gastos:', error.message);
+    res.status(500).json({ message: 'Error interno al obtener detalle de gastos' });
+  }
+};
+
+
 export const obtenerGastosPorConductorController = async (req, res) => {
   const { idConductor, fechaInicio, fechaFin } = req.query;
 

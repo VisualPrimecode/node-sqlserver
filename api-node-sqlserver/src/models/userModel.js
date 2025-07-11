@@ -645,6 +645,104 @@ WHERE
     throw new Error('Error al obtener los gastos por conductor: ' + error.message);
   }
 }
+
+// Detalle de Producción
+// Detalle de Producción
+export async function getDetalleProduccion(idConductor, fecha) {
+  console.log(`➡️ Obteniendo detalle de producción para el conductor ${idConductor} en la fecha ${fecha}`);
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('idConductor', idConductor)
+      .input('fecha', fecha)
+      .query(`
+        SELECT 
+          t1.idProgramacion, 
+          t1.IdDestino, 
+          t4.NomDestino, 
+          t1.fecha, 
+          t1.hora, 
+          t2.Monto, 
+          COUNT(t2.idventa) AS Pasajeros,
+          SUM(t2.Monto) AS Total
+        FROM AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas t1 
+        INNER JOIN AppPullmanFlorida.dbo.SGP_Vnt_Venta t2 
+          ON t2.IdDestino = t1.IdDestino 
+          AND t2.FechaViaje = t1.fecha 
+          AND t2.HoraSalida = t1.hora 
+          AND t2.Anulado = 0 
+        INNER JOIN PullmanFloridaApp.dbo.Vnt_RegistroBoletos t3 
+          ON t3.IdVenta = t2.IdVenta 
+        INNER JOIN AppPullmanFlorida.dbo.SGP_Mant_Destino t4 
+          ON t4.IdDestino = t1.IdDestino 
+        WHERE t1.fecha = @fecha 
+          AND t1.IdConductor = @idConductor 
+        GROUP BY 
+          t1.idProgramacion, 
+          t1.IdDestino, 
+          t4.NomDestino, 
+          t1.fecha, 
+          t1.hora, 
+          t2.Monto
+        ORDER BY t1.hora ASC, t2.Monto ASC;
+      `);
+    return result.recordset;
+  } catch (err) {
+    throw new Error('Error al obtener detalle de producción: ' + err.message);
+  }
+}
+
+
+// Detalle de Gastos
+export async function getDetalleGastos(idConductor, fecha) {
+  console.log(`➡️ Obteniendo detalle de gastos para el conductor ${idConductor} en la fecha ${fecha}`);
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('idConductor', idConductor)
+      .input('fecha', fecha)
+      .query(`
+        SELECT 
+          SUM(t2.Monto) AS total 
+        FROM AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas t1 
+        INNER JOIN PullmanFloridaApp.dbo.Vnt_RegistroGastos t2 
+          ON t2.IdProgramacion = t1.idProgramacion 
+        WHERE t1.IdConductor = @idConductor 
+          AND t1.fecha = @fecha;
+      `);
+    return result.recordset[0];
+  } catch (err) {
+    throw new Error('Error al obtener detalle de gastos: ' + err.message);
+  }
+}
+
+
+// Detalle de Entrega de Dinero
+export async function getDetalleEntregaDinero(idConductor, fecha) {
+  console.log(`➡️ Obteniendo detalle de entrega de dinero para el conductor ${idConductor} en la fecha ${fecha}`);
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('idConductor', idConductor)
+      .input('fecha', fecha)
+      .query(`
+        SELECT DISTINCT 
+          t2.FolioPlanilla, 
+          t2.Monto  
+        FROM AppPullmanFlorida.dbo.SGP_Prog_ProgSalidas t1 
+        INNER JOIN AppPullmanFlorida.dbo.SGP_Recau_EntregaDinero t2 
+          ON t2.FolioPlanilla = t1.Folio 
+        WHERE t1.IdConductor = @idConductor 
+          AND t1.fecha = @fecha;
+      `);
+    return result.recordset;
+  } catch (err) {
+    throw new Error('Error al obtener detalle de entrega de dinero: ' + err.message);
+  }
+}
+
+
+
 export async function actualizarEstadoViaje({ idProgramacion, accion }) {
   try {
     const pool = await getConnection();

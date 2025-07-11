@@ -17,7 +17,10 @@ import {
         obtenerGastosPorConductorController,
         marcarEstadoViaje,
         obtenerDatosQRController,
-        generarQRDesdeVenta
+        generarQRDesdeVenta,
+        getDetalleEntregaDineroHandler,
+        getDetalleProduccionHandler,
+        getDetalleGastosHandler
  } from '../controllers/userController.js';
 import { verificarToken } from '../middleware/authMiddleware.js'; // <-- Importa middleware
 import {loginUserJWT, refreshTokenController, validarTokenHandler} from '../controllers/authController.js';
@@ -44,7 +47,11 @@ router.get('/obtenerResumen', obtenerResumenMensual);
 router.get('/obtenerGastosConductor', obtenerGastosPorConductorController);
 router.post('/marcarEstadoViaje', marcarEstadoViaje); 
 router.get('/validar-token', verificarToken, validarTokenHandler);
-router.get('/datosQR/:idVenta', generarQRDesdeVenta); // NUEVA RUTA
+router.get('/datosQR/:idVenta', generarQRDesdeVenta); // NUEVA 
+router.get('/detalle-produccion', getDetalleProduccionHandler);
+router.get('/detalle-entrega-dinero', getDetalleEntregaDineroHandler);
+router.get('/detalle-gastos', getDetalleGastosHandler);
+
 
  // <-- Cambia la ruta a la que necesites
 // <-- Cambia la ruta a la que necesites

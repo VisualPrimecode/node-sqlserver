@@ -37,7 +37,7 @@ if (!user) {
     tipo: user.IdTipoUsuario,
   },
   process.env.JWT_SECRET,
-  { expiresIn: '30m' }
+  { expiresIn: '24h' }
 );
     const newRefreshToken = crypto.randomBytes(64).toString('hex');
     await guardarRefreshToken(userId, newRefreshToken);
