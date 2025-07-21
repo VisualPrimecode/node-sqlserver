@@ -61,7 +61,7 @@ export async function loginUser(nombreUsuario, password) {
       .input('nombreUser', nombreUsuario)
       .query(`
         SELECT 
-          IdUsuarioAnterior as 'IdUsuario',
+          IdUsuario,
           PassUsuario,
           EstadoUsuario,
           NombreUsuario,
@@ -648,6 +648,7 @@ WHERE
 
 // Detalle de Producción
 // Detalle de Producción
+//resumen diario de producción por conductor
 export async function getDetalleProduccion(idConductor, fecha) {
   console.log(`➡️ Obteniendo detalle de producción para el conductor ${idConductor} en la fecha ${fecha}`);
   try {

@@ -4,7 +4,7 @@ import { getConnection } from '../config/database.js';
 // Guarda un nuevo refresh token en la base de datos
 export const guardarRefreshToken = async (userId, refreshToken) => {
   const pool = await getConnection();
-
+  //aca se define la fecha de expiracion del refresh token
   // Puedes definir aquí cuánto dura el token (ej: 7 días)
 const fechaExpiracion = new Date(Date.now() + 24 * 60 * 60 * 1000); // +1 día en milisegundos
 

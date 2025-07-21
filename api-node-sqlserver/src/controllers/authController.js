@@ -28,7 +28,7 @@ export const refreshTokenController = async (req, res) => {
 if (!user) {
   return res.status(404).json({ message: 'Usuario no encontrado' });
 }
-
+//este expire no se respeta porque al momento de guardar el token se le asigna una fecha de expiracion
 
     const newAccessToken = jwt.sign(
   {
@@ -37,7 +37,7 @@ if (!user) {
     tipo: user.IdTipoUsuario,
   },
   process.env.JWT_SECRET,
-  { expiresIn: '24h' }
+  { expiresIn: '2m' }
 );
     const newRefreshToken = crypto.randomBytes(64).toString('hex');
     await guardarRefreshToken(userId, newRefreshToken);
@@ -88,7 +88,8 @@ export const loginUserJWT = async (req, res) => {
           return res.status(401).json({ message: 'Credenciales inválidas' });
       }
     }
-
+    //expiracion del token
+    //aca se define cuanto dura la sesion del usuario, hay otra mas arriba pero no es tomada en cuenta
     const token = jwt.sign(
       {
         id: user.IdUsuario,
@@ -96,9 +97,8 @@ export const loginUserJWT = async (req, res) => {
         tipo: user.IdTipoUsuario,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '30m' }
+      { expiresIn: '8h' }
     );
-
     const refreshToken = crypto.randomBytes(64).toString('hex');
     await guardarRefreshToken(user.IdUsuario, refreshToken);
 
