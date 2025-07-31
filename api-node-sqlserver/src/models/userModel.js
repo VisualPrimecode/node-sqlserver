@@ -61,7 +61,7 @@ export async function loginUser(nombreUsuario, password) {
       .input('nombreUser', nombreUsuario)
       .query(`
         SELECT 
-          IdUsuario,
+          IdUsuarioAnterior as 'IdUsuario',
           PassUsuario,
           EstadoUsuario,
           NombreUsuario,
